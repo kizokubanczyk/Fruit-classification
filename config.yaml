@@ -1,2 +1,10 @@
-path_train_data: "../data/"
+
+
+data_path_for_data_analysis: "../data/"
+
+path_data_train_for_main: "../data/train/"
+
+
+
+
 
