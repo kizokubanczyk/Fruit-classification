@@ -4,6 +4,8 @@ data_path_for_data_analysis: "../data/"
 
 path_data_train_for_main: "../data/train/"
 
+path_to_all_data: "../data/"
+
 
 
 
