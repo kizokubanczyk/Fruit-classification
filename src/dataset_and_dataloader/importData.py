@@ -1,23 +1,22 @@
-import cv2
+from typing import List, Tuple
 import os
 
 
-def importData(data_path: str) -> tuple:
-    fruit_images = {}
-    folders_to_skip = {"test", "train"}
+def importData(data_path: str) ->Tuple[List[str], List[str]]:
+
+    labels = []
+    images = []
+    folders_to_check = {'apple', 'avocado', 'banana', 'cherry', 'kiwi', 'mango', 'orange', 'pinenapple', 'strawberries', 'watermelon'}
 
     for dirname, _, filenames in os.walk(data_path):
         folder_name = os.path.basename(dirname)
 
-        if folder_name in folders_to_skip:
-            continue
+        if folder_name in folders_to_check:
 
-        if folder_name and folder_name not in fruit_images:
-            fruit_images[folder_name] = []
+            for filename in filenames:
+                image_path = os.path.join(dirname, filename)
 
-        for filename in filenames:
-            image_path = os.path.join(dirname, filename)
-            image = cv2.imread(image_path)
-            fruit_images[folder_name].append(image)
+                images.append(image_path)
+                labels.append(folder_name)
 
-    return fruit_images
+    return images, labels

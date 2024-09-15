@@ -12,14 +12,7 @@ def run(config) -> None:
     with (open(config, 'r') as file):
         config_data = yaml.safe_load(file)
 
-        fruit_labels_images = importData.importData(config_data.get('path_to_all_data'))
-
-        X_train, X_val, X_test, y_train, y_val, y_test = split(fruit_labels_images)
-
-
-        #path_to_all_data = config_data.get('path_to_all_data')
-        #classificationDataset = ClassificationDataset(path_to_all_data)
-        #print(classificationDataset.__getitem__(400))
+        images, labels = importData.importData(config_data.get('path_to_all_data'))
 
 
 
