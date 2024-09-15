@@ -6,8 +6,11 @@ import pandas as pd
 class  ClassificationDataset(Dataset):
     def __init__ (self, image_data_dir, transform=None):
 
+        self.train_data = None
+        self.test_data = None
+        self.validation_data = None
+
         self.fruit_images = {}
-        self.fruits_failed_to_load = 0
         self.folders_to_skip = {"test", "train"}
 
         for dirname, _, filenames in os.walk(image_data_dir):
