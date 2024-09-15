@@ -1,52 +1,62 @@
 from torch.utils.data import Dataset
-import os
 import cv2
 import pandas as pd
+from torchvision import transforms
+
 
 class  ClassificationDataset(Dataset):
-    def __init__ (self, image_data_dir, transform=None):
+    def __init__ (self, image_directory_paths: list[str], labels: list[str], transform = None):
 
-        self.train_data = None
-        self.test_data = None
-        self.validation_data = None
+        self.image_directory_paths = image_directory_paths
+        self.labels = labels
+        self.transform = transform
 
-        self.fruit_images = {}
-        self.folders_to_skip = {"test", "train"}
-
-        for dirname, _, filenames in os.walk(image_data_dir):
-            folder_name = os.path.basename(dirname)
-
-            if folder_name in self.folders_to_skip:
-                continue
-
-            if folder_name and folder_name not in self.fruit_images:
-                self.fruit_images[folder_name] = []
-
-            for filename in filenames:
-                image_path = os.path.join(dirname, filename)
-                image = cv2.imread(image_path)
-
-                self.fruit_images[folder_name].append(image)
 
     def __len__(self):
-         return sum(len(values) for values in self.fruit_images.values())
+         return (len(self.image_directory_paths))
 
     def __getitem__(self, index) -> tuple[str, pd.Series]:
-        index_sum = 0
-        key_number = 0
 
-        for list_of_fruit in self.fruit_images.values():
-            previous_sum = index_sum
-            index_sum += len(list_of_fruit)
+        image_path = self.image_directory_paths[index]
+        label = self.labels[index]
 
-            if index_sum > index:
-                keys = list(self.fruit_images.keys())
-                correct_key = keys[key_number]
-                element_index = index - previous_sum
-                break
+        image = cv2.imread(image_path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Konwersja BGR do RGB
 
-            key_number += 1
+        if self.transform:
+            image = self.transform(image)
 
-        return correct_key, list_of_fruit[element_index] # lable, sample
+        return image, label
+
+
+transform = transforms.Compose([
+    transforms.Resize((128, 128)),
+    transforms.ToTensor()
+])
+
+
+def createDataSet(X_train: str, X_val: str, X_test:str, y_train:str, y_val:str, y_test:str) ->tuple [
+    ClassificationDataset, ClassificationDataset, ClassificationDataset]:
+
+    train_dataset = ClassificationDataset(
+        image_directory_paths = X_train,
+        labels = y_train,
+        transform = transform
+    )
+
+    val_dataset = ClassificationDataset(
+        image_directory_paths = X_val,
+        labels = y_val,
+        transform = transform
+    )
+
+    test_dataset = ClassificationDataset(
+        image_directory_paths = X_test,
+        labels = y_test,
+        transform = transform
+    )
+
+    return train_dataset, val_dataset, test_dataset
+
 
 

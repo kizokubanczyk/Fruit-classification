@@ -5,7 +5,7 @@ import os
 def importData(data_path: str) ->Tuple[List[str], List[str]]:
 
     labels = []
-    images = []
+    image_directory_paths = []
     folders_to_check = {'apple', 'avocado', 'banana', 'cherry', 'kiwi', 'mango', 'orange', 'pinenapple', 'strawberries', 'watermelon'}
 
     for dirname, _, filenames in os.walk(data_path):
@@ -15,8 +15,7 @@ def importData(data_path: str) ->Tuple[List[str], List[str]]:
 
             for filename in filenames:
                 image_path = os.path.join(dirname, filename)
-
-                images.append(image_path)
+                image_directory_paths.append(image_path)
                 labels.append(folder_name)
 
-    return images, labels
+    return image_directory_paths, labels
