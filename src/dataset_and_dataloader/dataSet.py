@@ -1,7 +1,8 @@
 from torch.utils.data import Dataset
 import cv2
-import pandas as pd
+import torch
 from torchvision import transforms
+from PIL import Image
 
 
 class  ClassificationDataset(Dataset):
@@ -18,20 +19,21 @@ class  ClassificationDataset(Dataset):
     def __len__(self):
          return (len(self.image_directory_paths))
 
-    def __getitem__(self, index) -> tuple[str, pd.Series]:
-
+    def __getitem__(self, index) -> tuple[Image.Image, torch.Tensor]:
         image_path = self.image_directory_paths[index]
         label = self.labels[index]
 
         image = cv2.imread(image_path)
-
         if image is None:
             raise FileNotFoundError(f"The image {image_path} was not found")
 
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Konwersja BGR do RGB
+        image = Image.fromarray(image)  # Konwersja z numpy.ndarray na PIL.Image
 
         if self.transform:
             image = self.transform(image)
+
+        label = torch.tensor(label)  # Konwersja etykiety na tensor PyTorch
 
         return image, label
 
