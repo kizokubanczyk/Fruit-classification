@@ -7,6 +7,9 @@ from torchvision import transforms
 class  ClassificationDataset(Dataset):
     def __init__ (self, image_directory_paths: list[str], labels: list[str], transform = None):
 
+        if len(image_directory_paths) != len(labels):
+            raise ValueError("The number of images and labels must be the same")
+
         self.image_directory_paths = image_directory_paths
         self.labels = labels
         self.transform = transform
@@ -21,6 +24,10 @@ class  ClassificationDataset(Dataset):
         label = self.labels[index]
 
         image = cv2.imread(image_path)
+
+        if image is None:
+            raise FileNotFoundError(f"The image {image_path} was not found")
+
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Konwersja BGR do RGB
 
         if self.transform:
@@ -35,7 +42,8 @@ transform = transforms.Compose([
 ])
 
 
-def createDataSet(X_train: str, X_val: str, X_test:str, y_train:str, y_val:str, y_test:str) ->tuple [
+def createDataSet(X_train: list[str], X_val: list[str], X_test: list[str],
+                  y_train: list[str], y_val: list[str], y_test: list[str]) -> tuple[
     ClassificationDataset, ClassificationDataset, ClassificationDataset]:
 
     train_dataset = ClassificationDataset(
