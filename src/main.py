@@ -1,9 +1,9 @@
 import click
 import yaml
-from dataset_and_dataloader.dataSet import ClassificationDataset, createDataSet
+from dataset_and_dataloader.dataSet import createDataSet
 from dataset_and_dataloader import importData
 from dataset_and_dataloader.splitData import  split
-
+from dataset_and_dataloader.dataLoader import createDataLoader
 
 
 @click.command()
@@ -17,6 +17,11 @@ def run(config) -> None:
         X_train, X_val, X_test, y_train, y_val, y_test = split(image_directory_paths, labels)
 
         train_dataset, val_dataset, test_dataset  = createDataSet(X_train, X_val, X_test, y_train, y_val, y_test)
+
+        train_dataLoader = createDataLoader(train_dataset, 32, True)
+        val_dataLoader = createDataLoader(val_dataset, 32, True)
+        test_dataLoader = createDataLoader(test_dataset, 32, True)
+
 
 
 if __name__ == "__main__":
