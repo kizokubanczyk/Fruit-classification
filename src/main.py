@@ -6,6 +6,7 @@ from dataset_and_dataloader.splitData import  split
 from dataset_and_dataloader.dataLoader import createDataLoader
 
 
+
 @click.command()
 @click.option('--config', '-c', default='../config.yaml', help='Path to the configuration file')
 def run(config) -> None:
@@ -21,6 +22,9 @@ def run(config) -> None:
         train_dataLoader = createDataLoader(train_dataset, 32, True)
         val_dataLoader = createDataLoader(val_dataset, 32, True)
         test_dataLoader = createDataLoader(test_dataset, 32, True)
+
+
+
 
 
 

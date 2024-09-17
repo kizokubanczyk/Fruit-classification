@@ -1,39 +1,36 @@
 from torch.utils.data import Dataset
-import cv2
 import torch
 from torchvision import transforms
 from PIL import Image
 
 
 class  ClassificationDataset(Dataset):
-    def __init__ (self, image_directory_paths: list[str], labels: list[str], transform = None):
-
-        if len(image_directory_paths) != len(labels):
-            raise ValueError("The number of images and labels must be the same")
-
-        self.image_directory_paths = image_directory_paths
+    def __init__(self, image_directory_paths, labels, transform=None):
+        self.image_paths = image_directory_paths
         self.labels = labels
         self.transform = transform
 
+        # Utwórz słownik mapujący etykiety na liczby całkowite
+        self.label_to_index = {label: idx for idx, label in enumerate(set(labels))}
 
     def __len__(self):
-         return (len(self.image_directory_paths))
+        return len(self.image_paths)
 
-    def __getitem__(self, index) -> tuple[Image.Image, torch.Tensor]:
-        image_path = self.image_directory_paths[index]
-        label = self.labels[index]
+    def __getitem__(self, idx):
+        image_path = self.image_paths[idx]
+        label = self.labels[idx]
 
-        image = cv2.imread(image_path)
-        if image is None:
-            raise FileNotFoundError(f"The image {image_path} was not found")
-
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Konwersja BGR do RGB
-        image = Image.fromarray(image)  # Konwersja z numpy.ndarray na PIL.Image
+        # Wczytaj obraz jako PIL.Image
+        image = Image.open(image_path).convert('RGB')
 
         if self.transform:
             image = self.transform(image)
 
-        label = torch.tensor(label)  # Konwersja etykiety na tensor PyTorch
+        # Mapowanie etykiety na liczbę całkowitą
+        label = self.label_to_index[label]
+
+        # Konwersja etykiety na tensor
+        label = torch.tensor(label, dtype=torch.long)
 
         return image, label
 
