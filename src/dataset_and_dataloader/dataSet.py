@@ -22,6 +22,7 @@ class  ClassificationDataset(Dataset):
 
         # Wczytaj obraz jako PIL.Image
         image = Image.open(image_path).convert('RGB')
+        print(image)
 
         if self.transform:
             image = self.transform(image)

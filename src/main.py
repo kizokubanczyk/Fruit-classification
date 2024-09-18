@@ -3,8 +3,9 @@ import yaml
 from dataset_and_dataloader.dataSet import createDataSet
 from dataset_and_dataloader import importData
 from dataset_and_dataloader.splitData import  split
-from dataset_and_dataloader.dataLoader import createDataLoader
 
+from dataset_and_dataloader.dataLoader import createDataLoader
+from src.model.model_performance import train_model
 
 
 @click.command()
@@ -19,13 +20,13 @@ def run(config) -> None:
 
         train_dataset, val_dataset, test_dataset  = createDataSet(X_train, X_val, X_test, y_train, y_val, y_test)
 
-        train_dataLoader = createDataLoader(train_dataset, 32, True)
-        val_dataLoader = createDataLoader(val_dataset, 32, True)
-        test_dataLoader = createDataLoader(test_dataset, 32, True)
+        #print(train_dataset.__getitem__(0)[0][0])
 
+        train_dataLoader = createDataLoader(train_dataset, 64, True)
+        val_dataLoader = createDataLoader(val_dataset, 64, True)
+        test_dataLoader = createDataLoader(test_dataset, 64, True)
 
-
-
+        train_model(train_dataLoader,val_dataLoader)
 
 
 if __name__ == "__main__":
