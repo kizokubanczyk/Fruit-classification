@@ -5,8 +5,8 @@ def createDataLoader(dataSet: Dataset, batch_size: int, shuffle: bool) -> DataLo
 
     dataloader = DataLoader(
         dataset = dataSet,
-        batch_size=batch_size,
-        shuffle=shuffle
+        batch_size = batch_size,
+        shuffle = shuffle
     )
 
     return dataloader

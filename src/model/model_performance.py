@@ -1,97 +1,150 @@
 import torch
+
 import torch.nn as nn
 import torch.optim as optim
-from src.model.covalent_network import CNN
+from keras.src.utils.module_utils import tensorflow
+from sympy.physics.units import inches
+from tensorflow.python.keras.engine.data_adapter import DataAdapter
+from torch.utils.data import DataLoader
+from torchvision.models.quantization import resnet18
+
+from src.model import covalent_network
+from torchvision.models import mobilenet_v2
+
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from torchvision import models
+import torch.nn.functional as F
+import yaml
+from src.model.early_stopping import EarlyStopping
+from src.save_results import  save_accuracy
 
 
 num_classes = 10
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = CNN(num_classes=num_classes).to(device)  # Inicjalizacja modelu
 
-def train_model(train_loader,val_dataLoader):
+model = models.resnet18(pretrained=True).to(device) #bratch size 16, lr = 0,0001, images 256 x 256
+num_ftrs = model.fc.in_features
+model.fc = nn.Linear(num_ftrs, 10).to(device)
 
+early_stopping = EarlyStopping(patience=8, min_delta=0.01)
 
-    criterion = nn.CrossEntropyLoss() # jest używane podczas trenowania modelu do obliczania straty, co pozwala optymalizatorowi na aktualizację wag modelu.
+best_val_Accuracy = None
 
-    optimizer = optim.Adam(model.parameters(), lr=0.001)  #Inicjalizuje optymalizator Adam, który będzie używany do aktualizacji wag modelu. Optymalizator Adam
-    # jest popularnym algorytmem optymalizacji w uczeniu głębokim.
-    #model.parameters(): Pobiera parametry modelu (wagi i biasy), które będą aktualizowane podczas treningu.
-    #lr=0.001 -  Wartośćtego parametru określa, jak dużą   korektę  wagi modelu należy zastosowaćpo każdej iteracji (czyli pokażdej aktualizacji gradientu).
-    # W skrócie, learning rate kontroluje, jak szybki jest proces  uczenia się modelu.
+def train_model(train_dataLoader,val_dataLoader) -> None:
 
-    num_epochs = 10 #Liczba epok, czyli ile razy model będzie przechodził przez cały zbiór danych treningowych.
+    print(torch.cuda.is_available())
+    print(torch.cuda.current_device())
+    print(torch.cuda.get_device_name(0))
+
+    criterion = nn.CrossEntropyLoss()
+
+    optimizer = optim.AdamW(model.parameters(), lr=0.0001)
+
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+
+    num_epochs = 1000
 
     for epoch in range(num_epochs):
-        model.train()  # Przełącz model w tryb treningowy
+        model.train()
         running_loss = 0.0
 
-        for images, labels in train_loader:  # Przechodzenie przez batch danych
+        for images, labels in train_dataLoader:
             images, labels = images.to(device), labels.to(device)
+            optimizer.zero_grad()
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
 
-            optimizer.zero_grad()  #Gradienty są miarą tego, jak funkcja straty zmienia się w odpowiedzi na zmiany wag modelu.
-            # W procesie optymalizacji, gradienty są używane do aktualizacji wag modelu w kierunku, który minimalizuje funkcję straty.
-            # Wyzerowanie gradientów przed każdym krokiem optymalizacji jest niezbędne, aby gradienty obliczone dla bieżącego batcha danych były dokładne i
-            # nie były wpływane przez wcześniejsze obliczenia. Bez tego kroku gradienty mogą się kumulować, co prowadzi do nieprawidłowych aktualizacji wag i
-            # problemów z trenowaniem modelu.
+        scheduler.step()
 
-            outputs = model(images)  # Przekazuje obrazy przez model, aby uzyskać przewidywania. (Forward pass)
-            #Model przechodzi przez warstwy i oblicza prognozy na podstawie bieżących wag.
-
-            loss = criterion(outputs, labels)  # Obliczenie straty
-            loss.backward()  # Oblicza gradienty strat względem wag modelu (backward pass).
-            optimizer.step()  # Aktualizuje wagi modelu na podstawie obliczonych gradientów.
-
-            running_loss += loss.item()  # Zbieranie statystyk
-
-
-        print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {running_loss / len(train_loader)}')
+        print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {running_loss / len(train_dataLoader)}')
 
         running_loss = 0.0
         correct = 0
         total = 0
 
-        with torch.no_grad():  # Nie obliczaj gradientów podczas walidacji
+        model.eval()
+
+        with torch.no_grad():
             for images, labels in val_dataLoader:
-
-                images, labels = images.to(device), labels.to(device) # images i labels są przenoszone na urządzenie (CPU lub GPU), na którym działa model (device).
-
-
-                outputs = model(images) #Forward pass, Model generuje przewidywania (outputs) na podstawie przekazanych obrazów.
-
-                loss = criterion(outputs, labels) #Gradienty są śledzone: Podobnie jak podczas forward pass, operacje związane z obliczaniem straty (criterion)
-                # również są śledzone dla gradientów.
-
+                images, labels = images.to(device), labels.to(device)
+                outputs = model(images)
+                loss = criterion(outputs, labels)
                 running_loss += loss.item()
-
-                _, predicted = torch.max(outputs.data, 1) #zwraca indeksy klas o największym prawdopodobieństwie dla każdego obrazu. predicted to tensor z
-                # przewidywanymi klasami.
-
+                probabilities = F.softmax(outputs, dim=1)
+                _, predicted = torch.max(probabilities, 1)
                 total += labels.size(0)
-
-                correct += (predicted == labels).sum().item() #total to łączna liczba próbek przetworzonych w batchach.correct
-                # to liczba poprawnych przewidywań, gdzie predicted == labels porównuje przewidywania z prawdziwymi
-                # etykietami, a.sum().item() zlicza liczbę poprawnych przewidywań.
+                correct += (predicted == labels).sum().item()
 
         avg_loss = running_loss / len(val_dataLoader)
-        accuracy = 100 * correct / total # Po przetworzeniu wszystkich batchy, avg_loss oblicza średnią  stratę na  podstawie
-        #całkowitej straty(total_loss)  i liczby próbek(total).accuracy  oblicza dokładność modelu jako stosunek poprawnych
-        #przewidywań(correct) do całkowitej liczby  próbek(total).
+        accuracy = 100 * correct / total
+
         print(f'Validation Loss: {avg_loss}')
         print(f'Validation Accuracy: {accuracy}%')
 
-        #f1 score .. accuracy f1 score itp
+        global best_val_Accuracy
 
-def test_model(test_dataLoader):
+        if best_val_Accuracy is None:
+            best_val_Accuracy = accuracy
+        elif accuracy > best_val_Accuracy:
+            best_val_Accuracy = accuracy
+
+        early_stopping(val_loss=avg_loss, )
+
+        if early_stopping.early_stop:
+
+            with (open("../config.yaml", 'r') as file):
+                config_data = yaml.safe_load(file)
+                path_file = config_data.get('path_to_scores')
+                save_accuracy(best_val_Accuracy, "val accuracy", path_file)
+
+            print("Early stopping triggered")
+            # tu dojdzie do zapisu
+            break
+
+def test_model(test_dataLoader) -> None:
 
     correct = 0
     total = 0
 
-    with torch.no_grad():  # Nie obliczaj gradientów podczas testowania
+    with torch.no_grad():
         for images, labels in test_dataLoader:
             images, labels = images.to(device), labels.to(device)
+
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-    print(f'Accuracy of the model on the test images: {100 * correct / total}%')
+            accuracy = 100 * correct / total
+
+    with (open("../config.yaml", 'r') as file):
+        config_data = yaml.safe_load(file)
+        path_file = config_data.get('path_to_scores')
+        save_accuracy(accuracy, "test accuracy", path_file)
+
+    print(f'Accuracy of the model on the test images: {accuracy}%')
+
+
+
+def classify_external_image(external_dataLoader) -> None:
+    correct = 0
+    total = 0
+
+    with torch.no_grad():
+        for images, labels in external_dataLoader:
+
+            images, labels = images.to(device), labels.to(device)
+
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+            accuracy = 100 * correct / total
+
+
+        print(f'Accuracy of the model on the external images: {accuracy}%')
