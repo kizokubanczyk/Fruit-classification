@@ -1,49 +1,41 @@
 import torch
-
 import torch.nn as nn
 import torch.optim as optim
-from keras.src.utils.module_utils import tensorflow
-from sympy.physics.units import inches
-from tensorflow.python.keras.engine.data_adapter import DataAdapter
-from torch.utils.data import DataLoader
-from torchvision.models.quantization import resnet18
-
-from src.model import covalent_network
-from torchvision.models import mobilenet_v2
-
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from torchvision import models
 import torch.nn.functional as F
 import yaml
 from src.model.early_stopping import EarlyStopping
-from src.save_results import  save_accuracy
-
+from src.file_operations.save_results import  save_score, save_external_images, save_Confusion_Matrix
+from src.dataset_and_dataloader.dataSet import transform_all_label_to_index
+from torch.utils.data import DataLoader
+from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
 
 num_classes = 10
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-model = models.resnet18(pretrained=True).to(device) #bratch size 16, lr = 0,0001, images 256 x 256
-num_ftrs = model.fc.in_features
-model.fc = nn.Linear(num_ftrs, 10).to(device)
-
 early_stopping = EarlyStopping(patience=8, min_delta=0.01)
+model = models.resnet18(pretrained=True)
+num_ftrs = model.fc.in_features
+model.fc = nn.Linear(num_ftrs, num_classes)
+model = model.to(device)
 
-best_val_Accuracy = None
+def train_model(train_dataLoader:DataLoader, val_dataLoader:DataLoader) -> None:
 
-def train_model(train_dataLoader,val_dataLoader) -> None:
+    cuda_available = torch.cuda.is_available()
+    print(f"Is CUDA available: {cuda_available}")
 
-    print(torch.cuda.is_available())
-    print(torch.cuda.current_device())
+    if cuda_available:
+        current_device = torch.cuda.current_device()
+        print(f"Current CUDA device index: {current_device}")
+    else:
+        print("CUDA is not available, so no current device to display.")
+
     print(torch.cuda.get_device_name(0))
 
     criterion = nn.CrossEntropyLoss()
-
     optimizer = optim.AdamW(model.parameters(), lr=0.0001)
-
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
     num_epochs = 1000
+    print(f"numer of epochs: {num_epochs}")
 
     for epoch in range(num_epochs):
         model.train()
@@ -58,15 +50,12 @@ def train_model(train_dataLoader,val_dataLoader) -> None:
             optimizer.step()
             running_loss += loss.item()
 
-        scheduler.step()
-
         print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {running_loss / len(train_dataLoader)}')
 
         running_loss = 0.0
         correct = 0
         total = 0
-
-        model.eval()
+        model.train()
 
         with torch.no_grad():
             for images, labels in val_dataLoader:
@@ -85,66 +74,93 @@ def train_model(train_dataLoader,val_dataLoader) -> None:
         print(f'Validation Loss: {avg_loss}')
         print(f'Validation Accuracy: {accuracy}%')
 
-        global best_val_Accuracy
-
-        if best_val_Accuracy is None:
-            best_val_Accuracy = accuracy
-        elif accuracy > best_val_Accuracy:
-            best_val_Accuracy = accuracy
-
-        early_stopping(val_loss=avg_loss, )
+        early_stopping(accuracy=accuracy, model=model)
 
         if early_stopping.early_stop:
-
-            with (open("../config.yaml", 'r') as file):
-                config_data = yaml.safe_load(file)
-                path_file = config_data.get('path_to_scores')
-                save_accuracy(best_val_Accuracy, "val accuracy", path_file)
-
-            print("Early stopping triggered")
-            # tu dojdzie do zapisu
             break
+        scheduler.step(avg_loss)
 
-def test_model(test_dataLoader) -> None:
+def test_model(test_dataLoader: DataLoader) -> None:
 
     correct = 0
     total = 0
+    all_labels = []
+    all_predictions = []
+
+    with open("../config.yaml", 'r') as file:
+        config_data = yaml.safe_load(file)
+        model_path = config_data.get('path_to_best_model')
+
+    if model_path is not None:
+        state_dict = torch.load(model_path)
+        model.load_state_dict(state_dict, strict=False)
+        model.to(device)
+        model.eval()
 
     with torch.no_grad():
         for images, labels in test_dataLoader:
             images, labels = images.to(device), labels.to(device)
-
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-            accuracy = 100 * correct / total
+            all_labels.extend(labels.cpu().numpy())
+            all_predictions.extend(predicted.cpu().numpy())
 
-    with (open("../config.yaml", 'r') as file):
+    accuracy = 100 * correct / total
+    print(f'Accuracy of the model on the test images: {accuracy:.2f}%')
+
+    cm = confusion_matrix(all_labels, all_predictions)
+    print(f'Confusion Matrix:\n{cm}')
+
+    precision = precision_score(all_labels, all_predictions, average='weighted')
+    recall = recall_score(all_labels, all_predictions, average='weighted')
+    f1 = f1_score(all_labels, all_predictions, average='weighted')
+
+    print(f'Precision of the model: {precision * 100:.2f}%')
+    print(f'Recall of the model: {recall * 100:.2f}%')
+    print(f'F1 Score of the model: {f1 * 100:.2f}%')
+
+    with open("../config.yaml", 'r') as file:
         config_data = yaml.safe_load(file)
         path_file = config_data.get('path_to_scores')
-        save_accuracy(accuracy, "test accuracy", path_file)
 
-    print(f'Accuracy of the model on the test images: {accuracy}%')
+    save_Confusion_Matrix(cm, path_file)
+    save_score(f"{round(accuracy, 2)}%", "Accuracy on the test dataset", path_file)
+    save_score(f"{round(precision * 100, 2)}%", "Precision on the test dataset", path_file)
+    save_score(f"{round(recall * 100, 2)}%", "Recall on the test dataset", path_file)
+    save_score(f"{round(f1 * 100, 2)}%", "F1 Score on the test dataset", path_file)
 
+def classify_external_image(external_dataLoader: DataLoader) -> None:
 
+    with open("../config.yaml", 'r') as file:
+        config_data = yaml.safe_load(file)
+        model_path = config_data.get('path_to_best_model')
 
-def classify_external_image(external_dataLoader) -> None:
-    correct = 0
-    total = 0
+    if model_path is not None:
+        state_dict = torch.load(model_path, weights_only=True)
+        model.load_state_dict(state_dict, strict=False)
+        model.to(device)
+        model.eval()
 
-    with torch.no_grad():
-        for images, labels in external_dataLoader:
+        all_label_as_index = transform_all_label_to_index()
+        headers = []
 
-            images, labels = images.to(device), labels.to(device)
+        with torch.no_grad():
+            for images, _ in external_dataLoader:
+                images = images.to(device)
 
-            outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+                outputs = model(images)
+                _, predicted = torch.max(outputs, 1)
 
-            accuracy = 100 * correct / total
+                for i in range(images.size(0)):
+                    predicted_label = predicted[i].item()
+                    for key_as_label, value_as_label in all_label_as_index.items():
+                        if value_as_label == predicted_label:
+                            headers.append(key_as_label)
 
-
-        print(f'Accuracy of the model on the external images: {accuracy}%')
+                with (open("../config.yaml", 'r') as file):
+                    config_data = yaml.safe_load(file)
+                    path_file = config_data.get('path_to_exteranl_images')
+                    save_external_images(images, headers, path_file)

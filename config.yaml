@@ -1,6 +1,8 @@
 path_to_train_and_test_data: "../data/"
 path_to_external_data: "../data/external"
 path_to_scores: "../scores/scores.txt"
+path_to_exteranl_images: "../scores/external_images/"
+path_to_best_model: "../scores/best_model.pth"
 
 
 
