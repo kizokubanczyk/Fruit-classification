@@ -15,7 +15,7 @@ In this project, I manually implemented the ResNet-18 model (Residual Network), 
 The model consists of 18 layers, including 16 convolutional layers and two fully connected layers, and its architecture has been adapted to classify 10 types of fruits based on their visual features.
 
 ## Structure of the Resnet-18.:
-tutaj bedzie dodane zdjeciue resneta 18-----------------------------------------------------------------------------------
+https://github.com/kizokubanczyk/Fruit-classification/blob/main/screenshots/Structure_of_the_Resnet-18.png
 
 ## Predicting Individual Fruit Images
 The project includes a feature that allows users to input an image of a fruit (from one of the 10 fruit types), and the trained model will output the predicted fruit category. This functionality enables real-time classification of fruit images by processing the input and returning the most likely fruit label based on the visual characteristics.
