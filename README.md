@@ -1,5 +1,5 @@
 # Fruit classification project
-Fruit Classification is a machine learning project focused on classifying images of 10 different types of fruits using deep learning techniques. The goal is to train a convolutional neural network (ResNet, implemented manually) to accurately recognize and categorize various fruit types based on their visual characteristics.
+Fruit Classification is a machine learning project focused on classifying images of 10 different types of fruits using deep learning techniques. The goal is to train a convolutional neural network ResNet-18 to accurately recognize and categorize various fruit types based on their visual characteristics.
 
 Data: https://www.kaggle.com/datasets/karimabdulnabi/fruit-classification10-class/data
 
