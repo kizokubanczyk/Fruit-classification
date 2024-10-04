@@ -22,10 +22,12 @@ The project includes a feature that allows users to input one or multiple images
 
 To use this feature, simply provide an image, and the model will classify it as one of the following fruit types: apple, banana, orange, etc.
 
-The input image of an apple, provided without a label.
+### Przykład użycia modelu
+
+Wprowadzone zdjęcie jabłka, dostarczone bez etykiety:  
 <img src="https://github.com/kizokubanczyk/Fruit-classification/blob/main/data/external/external.png" alt="external" width="500"/>
 
-The input image was correctly classified by the model as an apple.
+Zdjęcie zostało poprawnie sklasyfikowane przez model jako jabłko:  
 <img src="https://github.com/kizokubanczyk/Fruit-classification/blob/main/scores/external_images/image_1.jpeg" alt="external" width="500"/>
 
  ## To improve the model's performance
