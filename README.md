@@ -26,7 +26,6 @@ The project includes a feature that allows users to input an image of a fruit (f
 To use this feature, simply provide an image, and the model will classify it as one of the following fruit types: apple, banana, orange, etc.
 
  ## To improve the model's performance
-- I used a model which I implemented myself
 - I increased the training data size four times and applied augmentation to each image.
 - I added an EarlyStopping class that saves the best model based on validation loss.
 - I added a scheduler that monitored the validation loss and reduced the learning rate if it did not improve for 5 epochs.
