@@ -27,7 +27,8 @@ To use this feature, simply provide an image, and the model will classify it as 
 Wprowadzone zdjęcie jabłka, dostarczone bez etykiety:  
 <img src="https://github.com/kizokubanczyk/Fruit-classification/blob/main/data/external/external.png" alt="external" width="500"/>
 
-Zdjęcie zostało poprawnie sklasyfikowane przez model jako jabłko:  
+Zdjęcie zostało poprawnie sklasyfikowane przez model jako jabłko:
+
 <img src="https://github.com/kizokubanczyk/Fruit-classification/blob/main/scores/external_images/image_1.jpeg" alt="external" width="500"/>
 
  ## To improve the model's performance
