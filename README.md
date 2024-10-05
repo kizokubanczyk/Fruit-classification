@@ -24,10 +24,10 @@ To use this feature, simply provide an image, and the model will classify it as 
 
 ### Przykład użycia modelu
 
-Wprowadzone zdjęcie jabłka, dostarczone bez etykiety:  
+The input image of an apple:  
 <img src="https://github.com/kizokubanczyk/Fruit-classification/blob/main/data/external/external.png" alt="external" width="500"/>
 
-Zdjęcie zostało poprawnie sklasyfikowane przez model jako jabłko:
+The image was correctly classified by the model as an apple:
 
 <img src="https://github.com/kizokubanczyk/Fruit-classification/blob/main/scores/external_images/image_1.jpeg" alt="external" width="500"/>
 
